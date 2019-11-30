@@ -35,8 +35,8 @@ usernames = {'BlartzelTheCat#6761' : 'moonfenceox',
              'Simba12371#6037' : '1138992184',
              'PigRectum#4296' : 'ofrench560'}
 
-client_id = '9942b072c5d24841bce12a332cde75f8'
-client_secret = '067252ac7e324a928ac75e23b94305b2'
+client_id = os.getenv("SPOTIFY_ID")
+client_secret = os.getenv("SPOTIFY_SECRET")
 
 client_credentials_manager = SpotifyClientCredentials(client_id, client_secret)
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
