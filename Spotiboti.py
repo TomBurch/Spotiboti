@@ -93,16 +93,17 @@ async def on_message(msg):
 
 @client.command(pass_context = True)
 async def join(ctx):
-    channel = ctx.message.author.voice.voice_channel
-    server = ctx.message.server
+    channel = ctx.message.author.voice.channel
+    server = ctx.message.author.guild
     settings[server.id] = {'shuffle' : False}
-    await client.join_voice_channel(channel)
+    await channel.connect();
+    #await client.join_voice_channel(channel)
 
 @client.command(pass_context = True)
 async def leave(ctx):
-    server = ctx.message.server
-    voice_client = client.voice_client_in(server)
-    await voice_client.disconnect()
+    """Disconnects the bot from voice channel"""
+
+    await ctx.voice_client.disconnect()
 
 @client.command(pass_context = True)
 async def play(ctx, url):
