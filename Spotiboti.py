@@ -29,11 +29,7 @@ full_queues = {}
 settings = {}
 
 #Spotify variables
-usernames = {'BlartzelTheCat#6761' : 'moonfenceox',
-             'WingWolf#8597' : 'epicwolf12',
-             'Berkano#6571' : 'zjqmp49wss8eum0abwp8bj48w',
-             'Simba12371#6037' : '1138992184',
-             'PigRectum#4296' : 'ofrench560'}
+usernames = os.getenv("SPOTIFY_NAMES")
 
 client_id = os.getenv("SPOTIFY_ID")
 client_secret = os.getenv("SPOTIFY_SECRET")
