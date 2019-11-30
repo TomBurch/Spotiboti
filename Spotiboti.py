@@ -14,10 +14,13 @@ from discord.ext import commands
 import youtube_dl
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-import pandas as pd
+#import pandas as pd
+
+from dotenv import load_dotenv
+load_dotenv()
 
 #Discord variables
-TOKEN = 'NTM2OTk0MDAxMDE5MDc2NjI3.Dyeycw.21BMFn7MXRpAfJy1-mO_9Vh8_rc'
+TOKEN = os.getenv("DISCORD_TOKEN")
 client = commands.Bot(command_prefix = '.')
 
 players = {}
