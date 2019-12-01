@@ -171,11 +171,15 @@ class Music(commands.Cog):
         else:
             await client.say('No song paused')
 
-    #@commands.command()
-    #async def stop(self, ctx):
-    #    """Disconnects the bot from voice"""
+    @commands.command()
+    async def stop(self, ctx):
+        """Stops playing music"""
 
-    #    await ctx.voice_client.disconnect()
+        channel = ctx.voice_client
+        if channel.is_playing() or channel.is_paused():
+            channel.stop()
+        else:
+            await client.say("No current song")
 
     #@commands.command(pass_context = True)
     #async def queue(ctx):
@@ -192,14 +196,14 @@ class Music(commands.Cog):
     #    else:
     #        await client.say('No active player')
 
-    #@commands.command(pass_context = True)
-    #async def volume(ctx, v):
-    #    server = ctx.message.server
-    #    player = find_player(server)
-    #    if player:
-    #        player.volume = int(v) / 100
-    #    else:
-    #        await client.say('No active player')
+    @commands.command()
+    async def volume(self, ctx, volume : int):
+        """Changes the player's volume from 0-200"""
+
+        channel = ctx.voice_client
+
+        channel.source.volume = volume / 100
+        await ctx.send("Changed volume to {}%".format(volume))
 
     #@commands.command(pass_context = True)
     #async def shuffle(ctx):
