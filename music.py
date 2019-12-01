@@ -2,11 +2,11 @@ import time
 import sys
 import os
 from json.decoder import JSONDecodeError
-import sqlite3 as sql3
+#import sqlite3 as sql3
 import asyncio
 import random
 import re
-import ast #Convert .env dictionary
+#import ast #Convert .env dictionary
 
 import discord
 from discord.ext import commands
@@ -91,12 +91,13 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.lastPlayer = None
+        self.stopped = False
 
     @commands.command()
     async def join(self, ctx):
         """Connects the bot to your voice channel"""
 
-        server = ctx.message.author.guild
+        server = ctx.message.guild
         channel = ctx.message.author.voice.channel
         settings[server.id] = {'shuffle' : False}
 
@@ -131,7 +132,7 @@ class Music(commands.Cog):
         if channel.is_playing():
             channel.pause()
         else:
-            await bot.say('No song playing')
+            await ctx.send('No song playing')
 
     @commands.command()
     async def resume(self, ctx):
@@ -142,7 +143,7 @@ class Music(commands.Cog):
         if channel.is_paused():
             channel.resume()
         else:
-            await client.say('No song paused')
+            await ctx.send('No song paused')
 
     @commands.command()
     async def stop(self, ctx):
@@ -150,9 +151,10 @@ class Music(commands.Cog):
 
         channel = ctx.voice_client
         if channel.is_playing() or channel.is_paused():
+            self.stopped = True
             channel.stop()
         else:
-            await client.say("No current song")
+            await ctx.send("No current song")
 
     #@commands.command(pass_context = True)
     #async def queue(ctx):
@@ -164,10 +166,13 @@ class Music(commands.Cog):
         """Skip the current song"""
 
         channel = ctx.voice_client
-        server = ctx.message.author.guild
+        server = ctx.message.guild
 
-        channel.stop()
-        await self.update_queue(server, channel)
+        if channel.is_playing() or channel.is_paused():
+            channel.stop()
+        else:
+            await ctx.send("No current song")
+        #await self.update_queue(server, channel)
 
     @commands.command()
     async def volume(self, ctx, volume : int):
@@ -178,17 +183,21 @@ class Music(commands.Cog):
         channel.source.volume = volume / 100
         await ctx.send("Changed volume to {}%".format(volume))
 
-    #@commands.command(pass_context = True)
-    #async def shuffle(ctx):
-    #    server = ctx.message.server
-    #    settings[server.id]['shuffle'] = True
-    #    await client.say('Shuffle turned on')
+    @commands.command()
+    async def shuffle(self, ctx):
+        """Turn on shuffle"""
 
-    #@commands.command(pass_context = True)
-    #async def unshuffle(ctx):
-    #    server = ctx.message.server
-    #    settings[server.id]['shuffle'] = False
-    #    await client.say('Shuffle turned off')
+        server = ctx.message.guild
+        settings[server.id]['shuffle'] = True
+        await ctx.send('Shuffle turned on')
+
+    @commands.command()
+    async def unshuffle(self, ctx):
+        """Turn off shuffle"""
+
+        server = ctx.message.guild
+        settings[server.id]['shuffle'] = False
+        await ctx.send('Shuffle turned off')
 
     def find_playlist_id(self, username, pl):
         """Find spotify playlist ID from name"""
@@ -210,20 +219,24 @@ class Music(commands.Cog):
             os.unlink(self.lastPlayer)
             self.lastPlayer = None
 
-        if full_queues[server.id] != []:
-            try:
-                popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
-                song = full_queues[server.id].pop(popInt)
-                print('Downloading: ' + song)
-                player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
-                self.lastPlayer = filename
-            except Exception as e:
-                print(e)
-                print('Error downloading: ' + song) 
-
-            channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server, channel), channel.loop))
+        if self.stopped == True:
+            self.stopped = False
         else:
-            print('Queue empty')
+
+            if full_queues[server.id] != []:
+                try:
+                    popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
+                    song = full_queues[server.id].pop(popInt)
+                    print('Downloading: ' + song)
+                    player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
+                    self.lastPlayer = filename
+                except Exception as e:
+                    print(e)
+                    print('Error downloading: ' + song) 
+
+                channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server, channel), channel.loop))
+            else:
+                print('Queue empty')
 
     @commands.command()
     async def playlist(self, ctx, *args : str):
