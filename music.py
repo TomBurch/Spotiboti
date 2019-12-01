@@ -119,7 +119,7 @@ class Music(commands.Cog):
     #    else:
     #        print('Queue empty')
 
-    @commands.command(pass_context = True)
+    @commands.command()
     async def join(self, ctx):
         """Connects the bot to your voice channel"""
 
@@ -129,49 +129,53 @@ class Music(commands.Cog):
 
         await channel.connect()
         
-    @commands.command(pass_context = True)
+    @commands.command()
     async def leave(self, ctx):
         """Disconnects the bot from voice channel"""
 
         await ctx.voice_client.disconnect()
 
-    @commands.command(pass_context = True)
+    @commands.command()
     async def play(self, ctx, *, url : str):
+        """Plays the song from youtube url"""
+
         print(url)
         server = ctx.message.guild
-        voice_channel = server.voice_client
+        channel = ctx.voice_client
 
         async with ctx.typing(): #Spotiboti is typing...
             player = await YTDLSource.from_url(url, loop = self.bot.loop)
-            voice_channel.play(player, after = lambda e: print('Player error: %s' % e) if e else None)
+            channel.play(player, after = lambda e: print('Player error: %s' % e) if e else None)
+
         await ctx.send('Now playing: {}'.format(player.title))
 
-    #@commands.command(pass_context = True)
-    #async def pause(ctx):
-    #    server = ctx.message.server
-    #    player = find_player(server)
-    #    if player:
-    #        player.pause()
-    #    else:
-    #        await client.say('No active player')
+    @commands.command()
+    async def pause(self, ctx):
+        """Pauses the current song"""
 
-    #@commands.command(pass_context = True)
-    #async def resume(ctx):
-    #    server = ctx.message.server
-    #    player = find_player(server)
-    #    if player:
-    #        player.resume()
-    #    else:
-    #        await client.say('No active player')
+        channel = ctx.voice_client
 
-    #@commands.command(pass_context = True)
-    #async def stop(ctx):
-    #    server = ctx.message.server
-    #    player = find_player(server)
-    #    if player:
-    #        player.stop()
-    #    else:
-    #        await client.say('No active player')
+        if channel.is_playing():
+            channel.pause()
+        else:
+            await bot.say('No song playing')
+
+    @commands.command()
+    async def resume(self, ctx):
+        """Resumes the current song"""
+
+        channel = ctx.voice_client
+
+        if channel.is_paused():
+            channel.resume()
+        else:
+            await client.say('No song paused')
+
+    #@commands.command()
+    #async def stop(self, ctx):
+    #    """Disconnects the bot from voice"""
+
+    #    await ctx.voice_client.disconnect()
 
     #@commands.command(pass_context = True)
     #async def queue(ctx):
