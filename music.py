@@ -6,6 +6,7 @@ import sqlite3 as sql3
 import asyncio
 import random
 import re
+import ast #Convert .env dictionary
 
 import discord
 from discord.ext import commands
@@ -17,7 +18,11 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 
 #Spotify variables
-usernames = os.getenv("SPOTIFY_NAMES")
+usernames = {'BlartzelTheCat#6761' : 'moonfenceox', 
+    'WingWolf#8597' : 'epicwolf12', 
+    'Berkano#6571' : 'zjqmp49wss8eum0abwp8bj48w', 
+    'Simba12371#6037' : '1138992184', 
+    'PigRectum#4296' : 'ofrench560'}
 
 client_id = os.getenv("SPOTIFY_ID")
 client_secret = os.getenv("SPOTIFY_SECRET")
@@ -25,14 +30,13 @@ client_secret = os.getenv("SPOTIFY_SECRET")
 client_credentials_manager = SpotifyClientCredentials(client_id, client_secret)
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
 
-players = {}
 load_queues = {}
 full_queues = {}
 settings = {}
 
 ytdl_format_options = {
     'format': 'bestaudio/best',
-    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
+    'outtmpl': 'audio_cache/%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,
     'noplaylist': True,
     'nocheckcertificate': True,
@@ -61,7 +65,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     @classmethod
     async def from_url(cls, url, *, loop = None, stream = False):
-        print(cls)
         loop = loop or asyncio.get_event_loop()
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download = not stream))
 
@@ -71,53 +74,23 @@ class YTDLSource(discord.PCMVolumeTransformer):
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data = data)
 
+    @classmethod
+    async def from_name(cls, name, *, loop = None, stream = False):
+        loop = loop or asyncio.get_event_loop()
+        data = await loop.run_in_executor(None, lambda: ytdl.extract_info("ytsearch:" + name, download = not stream))
+
+        if 'entries' in data:
+            data = data['entries'][0]
+        
+        filename = data['url'] if stream else ytdl.prepare_filename(data)
+        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data = data), filename
+
 
 
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-    #def find_player(self, server):
-    #    if server.id in players:
-    #        player = players[server.id]
-    #        print('Player = ' + str(player))
-    #        return player
-    #    else:
-    #        return False
-
-    #def find_queue(self, server):
-    #    if server.id in queues:
-    #        queue = queues[server.id]
-    #        print('Queue = ' + str(queue))
-    #        return queue
-    #    else:
-    #        return False
-
-    #async def update_queue(self, server, voice_client, channel):
-    #    if full_queues[server.id] != []:
-    #        player = load_queues[server.id].pop(0)
-    #        players[server.id] = player
-    #        player.start()
-
-    #        shuffled = settings[server.id]['shuffle']
-    #        popInt = None
-    #        while len(load_queues[server.id]) < 10:
-    #            try:
-    #                popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
-    #                song = full_queues[server.id].pop(popInt)
-    #                print('Downloading: ' + song)
-    #                player = await voice_client.create_ytdl_player(song, ytdl_options = {'default_search' : 'auto',
-    #                                                                                                      'quiet' : True,
-    #                                                                                                      'ignore-errors' : True},
-    #                                                                                      before_options = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", 
-    #                                                                                      after = lambda: asyncio.run_coroutine_threadsafe(update_queue(server, voice_client, channel), _loop))
-    #                load_queues[server.id].append(player)
-    #            except Exception as e:
-    #               print(e)
-    #               print('Error downloading: ' + song)
-    #               await client.send_message(channel, 'Error downloading: ' + song)    
-    #    else:
-    #        print('Queue empty')
+        self.lastPlayer = None
 
     @commands.command()
     async def join(self, ctx):
@@ -140,7 +113,7 @@ class Music(commands.Cog):
         """Plays the song from youtube url"""
 
         print(url)
-        server = ctx.message.guild
+        server = ctx.message.author.guild
         channel = ctx.voice_client
 
         async with ctx.typing(): #Spotiboti is typing...
@@ -186,15 +159,15 @@ class Music(commands.Cog):
     #    server = ctx.message.server
     #    await client.say(full_queues[server.id])
 
-    #@commands.command(pass_context = True)
-    #async def skip(ctx):
-    #    server = ctx.message.server
-    #    player = find_player(server)
+    @commands.command()
+    async def skip(self, ctx):
+        """Skip the current song"""
 
-    #    if player:
-    #        player.stop()
-    #    else:
-    #        await client.say('No active player')
+        channel = ctx.voice_client
+        server = ctx.message.author.guild
+
+        channel.stop()
+        await self.update_queue(server, channel)
 
     @commands.command()
     async def volume(self, ctx, volume : int):
@@ -217,72 +190,78 @@ class Music(commands.Cog):
     #    settings[server.id]['shuffle'] = False
     #    await client.say('Shuffle turned off')
 
-    #def find_playlist_id(username, pl):
-    #    playlists = sp.user_playlists(username)
-    #    print('pl: ' + pl)
-    #    for playlist in playlists['items']:
-    #        print(playlist['name'])
-    #        if playlist['name'].lower() == pl:
-    #            return playlist['id']
-    #    return False
+    def find_playlist_id(self, username, pl):
+        """Find spotify playlist ID from name"""
 
-    #@commands.command(pass_context = True)
-    #async def playlist(ctx, *args):
-    #    " Super helpful message "
-    #    author = str(ctx.message.author)
-    #    server = ctx.message.server
-    #    channel = ctx.message.channel
-    #    voice_client = client.voice_client_in(server)
-    #    pl = ' '.join(args).lower()
+        playlists = sp.user_playlists(username)
+        print('pl: ' + pl)
+        for playlist in playlists['items']:
+            print(playlist['name'])
+            if playlist['name'].lower() == pl:
+                return playlist['id']
+        return False
 
-    #    #Convert discord name to spotify name
-    #    if author in usernames:
-    #        username = usernames[author]
-    #    else:
-    #        await client.say('Username not found')
-    #        return
-    
-    #    #Find ID of target playlist
-    #    playlist_id = find_playlist_id(username, pl)
-    #    if not playlist_id: 
-    #        await client.say('Playlist not found') 
-    #        return
+    async def update_queue(self, server, channel):
+        shuffled = settings[server.id]['shuffle']
+        popInt = None
 
-    #    #Use ID to get playlist
-    #    playlist = sp.user_playlist(username, playlist_id)
+        if self.lastPlayer != None:
+            print(self.lastPlayer)
+            os.unlink(self.lastPlayer)
+            self.lastPlayer = None
 
-    #    #Create table of songs in playlist
-    #    tracks = playlist['tracks']['items']
-    #    songs = []
-    #    for track in tracks:
-    #        track = track['track']
-    #        song = '{} - {}'.format(track['artists'][0]['name'], track['name'])
-    #        song = re.sub('[/]', ' ', song) # '/' in string causes http errors
-    #        songs.append(song)
+        if full_queues[server.id] != []:
+            try:
+                popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
+                song = full_queues[server.id].pop(popInt)
+                print('Downloading: ' + song)
+                player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
+                self.lastPlayer = filename
+            except Exception as e:
+                print(e)
+                print('Error downloading: ' + song) 
 
-    #    full_queues[server.id] = songs
-    #    player = find_player(server)
-    #    try:
-    #        if player: player.stop()
-    #    except:
-    #        print('No player to stop')
-    #    i = 0
-    #    playing = False
+            channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server, channel), channel.loop))
+        else:
+            print('Queue empty')
 
-    #    load_queues[server.id] = []
+    @commands.command()
+    async def playlist(self, ctx, *args : str):
+        """Queues up a spotify playlist by name"""
 
-    #    shuffled = settings[server.id]['shuffle']
-    #    popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
-    #    song = full_queues[server.id].pop(popInt)
+        author = str(ctx.message.author)
+        channel = ctx.voice_client
+        server = ctx.message.guild
+        pl = ' '.join(args).lower()
 
-    #    player = await voice_client.create_ytdl_player(song, ytdl_options = {'default_search': 'auto',
-    #                                                                         'quiet' : True,
-    #                                                                         'ignore-errors' : True},
-    #                                                   before_options = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", 
-    #                                                   after = lambda: asyncio.run_coroutine_threadsafe(update_queue(server, voice_client, channel), _loop))
-    #    load_queues[server.id].append(player)
+        #Convert discord name to spotify name
+        if author in usernames:
+            username = usernames[author]
+        else:
+            return await ctx.send('Username not found')
+            
 
-    #    await update_queue(server, voice_client, channel)
+        #Find ID of target playlist
+        playlist_id = self.find_playlist_id(username, pl)
+        if not playlist_id: 
+            return await ctx.send('Playlist not found') 
+            
+        #Use ID to get playlist
+        playlist = sp.user_playlist(username, playlist_id)
+
+        #Create table of songs from playlist
+        tracks = playlist['tracks']['items']
+        songs = []
+        for track in tracks:
+            track = track['track']
+            song = '{} - {}'.format(track['artists'][0]['name'], track['name'])
+            song = re.sub('[/]', ' ', song) # '/' in string causes http errors
+            songs.append(song)
+
+        full_queues[server.id] = songs
+
+        await self.update_queue(server, channel)
+
 
 def setup(bot):
     bot.add_cog(Music(bot))
