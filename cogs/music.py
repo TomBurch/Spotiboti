@@ -6,7 +6,6 @@ from json.decoder import JSONDecodeError
 import asyncio
 import random
 import re
-#import ast #Convert .env dictionary
 
 import discord
 from discord.ext import commands
@@ -16,6 +15,8 @@ _loop = asyncio.get_event_loop()
 import youtube_dl
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
+
+from Spotiboti import oauth2
 
 #Spotify variables
 usernames = {'BlartzelTheCat#6761' : 'moonfenceox', 
@@ -210,6 +211,12 @@ class Music(commands.Cog):
                 return playlist['id']
         return False
 
+    def get_playlist(self, id):
+        playlist = sp.search(q = 'playlist:' + id, type = 'playlist')
+        print(playlist)
+        #if playlist:
+            #return playlist
+
     async def update_queue(self, server, channel):
         shuffled = settings[server.id]['shuffle']
         popInt = None
@@ -253,14 +260,18 @@ class Music(commands.Cog):
         else:
             return await ctx.send('Username not found')
             
-
+        #if pl.startswith('https://open.spotify.com/playlist/'):
+        #playlist = self.get_playlist(pl)
+        print(pl)
+        #playlist = sp.user_playlist_tracks(user='', playlist_id = pl)
+        #print(playlist)
+        #else:
         #Find ID of target playlist
-        playlist_id = self.find_playlist_id(username, pl)
-        if not playlist_id: 
-            return await ctx.send('Playlist not found') 
-            
-        #Use ID to get playlist
-        playlist = sp.user_playlist(username, playlist_id)
+        #    playlist_id = self.find_playlist_id(username, pl)
+            #Use ID to get playlist
+         #   playlist = sp.user_playlist(username, playlist_id)
+         #   if not playlist_id: 
+        #        return await ctx.send('Playlist not found') 
 
         #Create table of songs from playlist
         tracks = playlist['tracks']['items']
@@ -274,6 +285,12 @@ class Music(commands.Cog):
         full_queues[server.id] = songs
 
         await self.update_queue(server, channel)
+
+    @commands.command(name="trace", hidden=True)
+    @commands.is_owner()
+    async def _trace(self, ctx):
+        sp.trace_out = not sp.trace_out
+        await ctx.send("Trace = {}".format(sp.trace_out))
 
 
 def setup(bot):

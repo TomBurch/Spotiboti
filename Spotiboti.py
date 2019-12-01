@@ -13,7 +13,7 @@ startup_extensions = ["admin", "events", "music"]
 if __name__ == "__main__":
     for extension in startup_extensions:
         try:
-            bot.load_extension(extension)
+            bot.load_extension("cogs." + extension)
             print("Loaded {} extension".format(extension))
         except Exception as e:
             print("Failed to load {} extension\n".format(extension))

@@ -13,7 +13,7 @@ class Events(commands.Cog):
     async def on_message(self, msg):
         author = msg.author
         content = msg.content
-        print('{}: {}'.format(author, content))
+        #print('{}: {}'.format(author, content))
         #await self.bot.process_commands(msg)
 
     @commands.Cog.listener()

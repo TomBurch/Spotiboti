@@ -8,7 +8,7 @@ class Admin(commands.Cog):
     @commands.is_owner()
     async def _reload(self, ctx, ext : str):
         try:
-            self.bot.reload_extension(ext)
+            self.bot.reload_extension("cogs." + ext)
             print("Reloaded {} extension\n".format(ext))
         except Exception as e:
             print("Failed to reload {} extension\n".format(ext))
