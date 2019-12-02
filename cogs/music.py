@@ -16,7 +16,8 @@ import youtube_dl
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 
-from Spotiboti import oauth2
+from SpotiInteract.utility import getPlaylistFromId
+#from Spotiboti import oauth2
 
 #Spotify variables
 usernames = {'BlartzelTheCat#6761' : 'moonfenceox', 
@@ -29,6 +30,8 @@ client_id = os.getenv("SPOTIFY_ID")
 client_secret = os.getenv("SPOTIFY_SECRET")
 
 client_credentials_manager = SpotifyClientCredentials(client_id, client_secret)
+#sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
+#token = client_credentials_manager.get_access_token()
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
 
 load_queues = {}
@@ -211,12 +214,6 @@ class Music(commands.Cog):
                 return playlist['id']
         return False
 
-    def get_playlist(self, id):
-        playlist = sp.search(q = 'playlist:' + id, type = 'playlist')
-        print(playlist)
-        #if playlist:
-            #return playlist
-
     async def update_queue(self, server, channel):
         shuffled = settings[server.id]['shuffle']
         popInt = None
@@ -246,13 +243,12 @@ class Music(commands.Cog):
                 print('Queue empty')
 
     @commands.command()
-    async def playlist(self, ctx, *args : str):
+    async def playlist(self, ctx, plQuery : str):
         """Queues up a spotify playlist by name"""
 
         author = str(ctx.message.author)
         channel = ctx.voice_client
-        server = ctx.message.guild
-        pl = ' '.join(args).lower()
+        server = ctx.message.guild   
 
         #Convert discord name to spotify name
         if author in usernames:
@@ -260,18 +256,20 @@ class Music(commands.Cog):
         else:
             return await ctx.send('Username not found')
             
-        #if pl.startswith('https://open.spotify.com/playlist/'):
-        #playlist = self.get_playlist(pl)
-        print(pl)
-        #playlist = sp.user_playlist_tracks(user='', playlist_id = pl)
-        #print(playlist)
-        #else:
-        #Find ID of target playlist
-        #    playlist_id = self.find_playlist_id(username, pl)
+        if plQuery.startswith('https://open.spotify.com/playlist/'):
+            plQuery = plQuery[34:56]
+            print("Playlist id = " + plQuery)
+            playlist = getPlaylistFromId(plQuery, client_credentials_manager.get_access_token())
+            if not playlist:
+                return await ctx.send('Playlist not found')
+        else:       
+            #Find ID of target playlist
+            playlist_id = self.find_playlist_id(username, plQuery)
+            if not playlist_id: 
+                return await ctx.send('Playlist not found') 
             #Use ID to get playlist
-         #   playlist = sp.user_playlist(username, playlist_id)
-         #   if not playlist_id: 
-        #        return await ctx.send('Playlist not found') 
+            playlist = sp.user_playlist(username, playlist_id)
+            
 
         #Create table of songs from playlist
         tracks = playlist['tracks']['items']
@@ -290,7 +288,8 @@ class Music(commands.Cog):
     @commands.is_owner()
     async def _trace(self, ctx):
         sp.trace_out = not sp.trace_out
-        await ctx.send("Trace = {}".format(sp.trace_out))
+        sp.trace = not sp.trace
+        await ctx.send("Trace = {}".format(sp.trace))
 
 
 def setup(bot):

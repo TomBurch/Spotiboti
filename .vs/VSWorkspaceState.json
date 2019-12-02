@@ -1,7 +1,9 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\cogs",
+    "\\SpotiInteract"
   ],
-  "SelectedNode": "\\events.py",
+  "SelectedNode": "\\oauth2.py",
   "PreviewInSolutionExplorer": false
 }
