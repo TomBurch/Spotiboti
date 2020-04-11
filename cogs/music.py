@@ -226,8 +226,8 @@ class Music(commands.Cog):
         if self.stopped == True:
             self.stopped = False
         else:
-
             if full_queues[server.id] != []:
+                player = None
                 try:
                     popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
                     song = full_queues[server.id].pop(popInt)
@@ -237,8 +237,10 @@ class Music(commands.Cog):
                 except Exception as e:
                     print(e)
                     print('Error downloading: ' + song) 
-
-                channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server, channel), channel.loop))
+                if player:
+                    channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server, channel), channel.loop))
+                else:
+                    print("No player")
             else:
                 print('Queue empty')
 
