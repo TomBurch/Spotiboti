@@ -213,8 +213,8 @@ class Music(commands.Cog):
 
     async def send_message(self, server, message: str):
         ctx = server_data[server.id]['ctx']
-        async with ctx.typing():
-            return await ctx.send(message)
+        await ctx.trigger_typing()
+        return await ctx.send(message)
 
     async def update_queue(self, server):
         shuffled = server_settings[server.id]['shuffle']
@@ -265,19 +265,22 @@ class Music(commands.Cog):
         if author in usernames:
             username = usernames[author]
         else:
-            return await self.send_message(server, 'Username not found')
+            await self.send_message(server, 'Username not found')
+            return
             
         if plQuery.startswith('https://open.spotify.com/playlist/'):
             plQuery = plQuery[34:56]
             print("Playlist id = " + plQuery)
             playlist = getPlaylistFromId(plQuery, client_credentials_manager.get_access_token())
             if not playlist:
-                return await self.send_message(server, 'Playlist not found')
+                await self.send_message(server, 'Playlist not found')
+                return
         else:       
             #Find ID of target playlist
             playlist_id = self.find_playlist_id(username, plQuery)
             if not playlist_id: 
-                return await self.send_message(server, 'Playlist not found') 
+                await self.send_message(server, 'Playlist not found')
+                return
             #Use ID to get playlist
             playlist = sp.user_playlist(username, playlist_id)
             
