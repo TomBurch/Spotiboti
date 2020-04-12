@@ -2,7 +2,6 @@ import time
 import sys
 import os
 from json.decoder import JSONDecodeError
-#import sqlite3 as sql3
 import asyncio
 import random
 import re
@@ -95,6 +94,8 @@ class Music(commands.Cog):
         self.lastPlayer = None
         self.stopped = False
 
+    #===Commands===#
+  
     @commands.command()
     async def join(self, ctx):
         """Connects the bot to your voice channel"""
@@ -148,22 +149,6 @@ class Music(commands.Cog):
         else:
             await self.send_message(server, 'No song paused')
 
-    #@commands.command()
-    #async def stop(self, ctx):
-    #    """Stops playing music"""
-    #
-    #    channel = ctx.voice_client
-    #    if channel.is_playing() or channel.is_paused():
-    #        self.stopped = True
-    #        channel.stop()
-    #    else:
-    #        await ctx.send("No current song")
-
-    #@commands.command(pass_context = True)
-    #async def queue(ctx):
-    #    server = ctx.message.server
-    #    await client.say(full_queues[server.id])
-
     @commands.command()
     async def skip(self, ctx):
         """Skip the current song"""
@@ -199,59 +184,6 @@ class Music(commands.Cog):
                 await self.send_message(server, 'Shuffle turned on')
             else:
                 await self.send_message(server, 'Shuffle turned off')
-
-    def find_playlist_id(self, username, pl):
-        """Find spotify playlist ID from name"""
-
-        playlists = sp.user_playlists(username)
-        print('pl: ' + pl)
-        for playlist in playlists['items']:
-            print(playlist['name'])
-            if playlist['name'].lower() == pl:
-                return playlist['id']
-        return False
-
-    async def send_message(self, server, message: str):
-        ctx = server_data[server.id]['ctx']
-        await ctx.trigger_typing()
-        return await ctx.send(message)
-
-    async def update_queue(self, server):
-        shuffled = server_settings[server.id]['shuffle']
-        #playing_message = server_settings[server.id]['playing_message']
-        ctx = server_data[server.id]['ctx']
-
-        text_channel = ctx.channel
-        voice_channel = ctx.voice_client
-
-        popInt = None
-
-        if self.lastPlayer != None:
-            print(self.lastPlayer)
-            os.unlink(self.lastPlayer)
-            self.lastPlayer = None
-
-        if self.stopped == True:
-            self.stopped = False    
-        else:
-            if full_queues[server.id] != []:
-                player = None
-                try:
-                    popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
-                    song = full_queues[server.id].pop(popInt)
-                    print('Downloading: ' + song)
-                    player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
-                    self.lastPlayer = filename
-                except Exception as e:
-                    print(e)
-                    print('Error downloading: ' + song) 
-                if player:
-                    await self.send_message(server, 'Now playing: ' + song)
-                    voice_channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server), voice_channel.loop))
-                else:
-                    print("No player")
-            else:
-                print('Queue empty')
 
     @commands.command()
     async def playlist(self, ctx, plQuery : str):
@@ -304,6 +236,63 @@ class Music(commands.Cog):
         sp.trace_out = not sp.trace_out
         sp.trace = not sp.trace
         await self.send_message(server, "Trace = {}".format(sp.trace))
+
+    #===Utility===#
+   
+    def find_playlist_id(self, username, pl):
+        """Find spotify playlist ID from name"""
+
+        playlists = sp.user_playlists(username)
+        print('pl: ' + pl)
+        for playlist in playlists['items']:
+            print(playlist['name'])
+            if playlist['name'].lower() == pl:
+                return playlist['id']
+        return False
+
+    async def send_message(self, server, message: str):
+        """Send a message to the text_channel"""
+
+        ctx = server_data[server.id]['ctx']
+        await ctx.trigger_typing()
+        return await ctx.send(message)
+
+    async def update_queue(self, server):
+        shuffled = server_settings[server.id]['shuffle']
+        #playing_message = server_settings[server.id]['playing_message']
+        ctx = server_data[server.id]['ctx']
+
+        text_channel = ctx.channel
+        voice_channel = ctx.voice_client
+
+        popInt = None
+
+        if self.lastPlayer != None:
+            print(self.lastPlayer)
+            os.unlink(self.lastPlayer)
+            self.lastPlayer = None
+
+        if self.stopped == True:
+            self.stopped = False    
+        else:
+            if full_queues[server.id] != []:
+                player = None
+                try:
+                    popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
+                    song = full_queues[server.id].pop(popInt)
+                    print('Downloading: ' + song)
+                    player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
+                    self.lastPlayer = filename
+                except Exception as e:
+                    print(e)
+                    print('Error downloading: ' + song) 
+                if player:
+                    await self.send_message(server, 'Now playing: ' + song)
+                    voice_channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server), voice_channel.loop))
+                else:
+                    print("No player")
+            else:
+                print('Queue empty')
 
 
 def setup(bot):
