@@ -36,7 +36,8 @@ sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
 
 load_queues = {}
 full_queues = {}
-settings = {}
+server_settings = {}
+server_data = {}
 
 ytdl_format_options = {
     'format': 'bestaudio/best',
@@ -103,7 +104,8 @@ class Music(commands.Cog):
 
         server = ctx.message.guild
         channel = ctx.message.author.voice.channel
-        settings[server.id] = {'shuffle' : False}
+        server_settings[server.id] = {'shuffle' : False}
+        server_data[server.id] = {'ctx' : ctx}
 
         await channel.connect()
         
@@ -176,7 +178,6 @@ class Music(commands.Cog):
             channel.stop()
         else:
             await ctx.send("No current song")
-        #await self.update_queue(server, channel)
 
     @commands.command()
     async def volume(self, ctx, volume : int):
@@ -189,19 +190,15 @@ class Music(commands.Cog):
 
     @commands.command()
     async def shuffle(self, ctx):
-        """Turn on shuffle"""
+        """Turn shuffle on/off"""
 
         server = ctx.message.guild
-        settings[server.id]['shuffle'] = True
-        await ctx.send('Shuffle turned on')
-
-    @commands.command()
-    async def unshuffle(self, ctx):
-        """Turn off shuffle"""
-
-        server = ctx.message.guild
-        settings[server.id]['shuffle'] = False
-        await ctx.send('Shuffle turned off')
+        currentSetting = server_settings[server.id]['shuffle']
+        server_settings[server.id]['shuffle'] = not currentSetting
+        if server_settings[server.id]['shuffle'] == True:
+            await ctx.send('Shuffle turned on')
+        else:
+            await ctx.send('Shuffle turned off')
 
     def find_playlist_id(self, username, pl):
         """Find spotify playlist ID from name"""
@@ -215,7 +212,7 @@ class Music(commands.Cog):
         return False
 
     async def update_queue(self, server, channel, ctx):
-        shuffled = settings[server.id]['shuffle']
+        shuffled = server_settings[server.id]['shuffle']
         popInt = None
 
         if self.lastPlayer != None:
