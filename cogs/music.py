@@ -17,7 +17,6 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 
 from SpotiInteract.utility import getPlaylistFromId
-#from Spotiboti import oauth2
 
 #Spotify variables
 usernames = {   'BlartzelTheCat#6761'   : 'moonfenceox', 
@@ -30,8 +29,6 @@ client_id = os.getenv("SPOTIFY_ID")
 client_secret = os.getenv("SPOTIFY_SECRET")
 
 client_credentials_manager = SpotifyClientCredentials(client_id, client_secret)
-#sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
-#token = client_credentials_manager.get_access_token()
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
 
 load_queues = {}
@@ -151,16 +148,16 @@ class Music(commands.Cog):
         else:
             await ctx.send('No song paused')
 
-    @commands.command()
-    async def stop(self, ctx):
-        """Stops playing music"""
-
-        channel = ctx.voice_client
-        if channel.is_playing() or channel.is_paused():
-            self.stopped = True
-            channel.stop()
-        else:
-            await ctx.send("No current song")
+    #@commands.command()
+    #async def stop(self, ctx):
+    #    """Stops playing music"""
+    #
+    #    channel = ctx.voice_client
+    #    if channel.is_playing() or channel.is_paused():
+    #        self.stopped = True
+    #        channel.stop()
+    #    else:
+    #        await ctx.send("No current song")
 
     #@commands.command(pass_context = True)
     #async def queue(ctx):
@@ -192,9 +189,11 @@ class Music(commands.Cog):
     async def shuffle(self, ctx):
         """Turn shuffle on/off"""
 
-        server = ctx.message.guild
+        server = ctx.message.guild   
         currentSetting = server_settings[server.id]['shuffle']
+
         server_settings[server.id]['shuffle'] = not currentSetting
+
         if server_settings[server.id]['shuffle'] == True:
             await ctx.send('Shuffle turned on')
         else:
