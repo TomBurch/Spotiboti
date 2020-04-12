@@ -289,6 +289,8 @@ class Music(commands.Cog):
                     popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
                     song = full_queues[server.id].pop(popInt)
                     print('Downloading: ' + song)
+                    message = await self.send_message(server, 'Downloading: ' + song, overwrite = True)
+                    server_data[server.id]['playing_message'] = message
                     player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
                     self.lastPlayer = filename
                 except Exception as e:
