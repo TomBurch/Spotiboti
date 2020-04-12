@@ -103,10 +103,12 @@ class Music(commands.Cog):
         server = ctx.message.guild
         channel = ctx.message.author.voice.channel
         server_settings[server.id] = {'shuffle' : False}
-        server_data[server.id] = {'ctx' : ctx}
+        server_data[server.id] = {'ctx' : ctx,
+                                  'playing_message' : None}
 
         await channel.connect()
-        await self.send_message(server, "Spotiboti is online")
+        message = await self.send_message(server, "Spotiboti is online")
+        server_data[server.id]['playing_message'] = message 
         
     @commands.command()
     async def leave(self, ctx):
@@ -115,7 +117,7 @@ class Music(commands.Cog):
         await ctx.voice_client.disconnect()
 
     @commands.command()
-    async def play(self, ctx, *, url : str):
+    async def play(self, ctx, *, url: str):
         """Plays the song from youtube url"""
 
         print(url)
@@ -162,7 +164,7 @@ class Music(commands.Cog):
             await self.send_message(server, "No current song")
 
     @commands.command()
-    async def volume(self, ctx, volume : int):
+    async def volume(self, ctx, volume: int):
         """Changes the player's volume from 0-200"""
 
         channel = ctx.voice_client
@@ -178,20 +180,19 @@ class Music(commands.Cog):
         server = ctx.message.guild   
         currentSetting = server_settings[server.id]['shuffle']
 
-        async with ctx.typing():
-            server_settings[server.id]['shuffle'] = not currentSetting
-            if server_settings[server.id]['shuffle'] == True:
-                await self.send_message(server, 'Shuffle turned on')
-            else:
-                await self.send_message(server, 'Shuffle turned off')
+        server_settings[server.id]['shuffle'] = not currentSetting
+        if server_settings[server.id]['shuffle'] == True:
+            await self.send_message(server, 'Shuffle turned on')
+        else:
+            await self.send_message(server, 'Shuffle turned off')
 
     @commands.command()
-    async def playlist(self, ctx, plQuery : str):
+    async def playlist(self, ctx, plQuery: str):
         """Queues up a spotify playlist by name"""
 
-        author = str(ctx.message.author)
         channel = ctx.voice_client
         server = ctx.message.guild   
+        author = str(ctx.message.author)
 
         #Convert discord name to spotify name
         if author in usernames:
@@ -250,16 +251,23 @@ class Music(commands.Cog):
                 return playlist['id']
         return False
 
-    async def send_message(self, server, message: str):
-        """Send a message to the text_channel"""
+    async def send_message(self, server, message: str, overwrite: bool = False):
+        """Send a message to the text channel"""
 
         ctx = server_data[server.id]['ctx']
+        channel = ctx.channel
+        #playing_message = server_data[server.id]['playing_message']
+        #lastMessage = channel.last_message_id
+
+        #if overwrite:
+        #    if lastMessage == playing_message.id:
+        #        await playing_message.edit(message)          
+        #        return playing_message    
         await ctx.trigger_typing()
         return await ctx.send(message)
 
     async def update_queue(self, server):
         shuffled = server_settings[server.id]['shuffle']
-        #playing_message = server_settings[server.id]['playing_message']
         ctx = server_data[server.id]['ctx']
 
         text_channel = ctx.channel
@@ -285,9 +293,9 @@ class Music(commands.Cog):
                     self.lastPlayer = filename
                 except Exception as e:
                     print(e)
-                    print('Error downloading: ' + song) 
                 if player:
-                    await self.send_message(server, 'Now playing: ' + song)
+                    message = await self.send_message(server, 'Now playing: ' + song, overwrite = True)
+                    server_data[server.id]['playing_message'] = message
                     voice_channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server), voice_channel.loop))
                 else:
                     print("No player")
