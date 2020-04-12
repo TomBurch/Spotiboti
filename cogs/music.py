@@ -105,6 +105,7 @@ class Music(commands.Cog):
         server_data[server.id] = {'ctx' : ctx}
 
         await channel.connect()
+        await self.send_message(server, "Spotiboti is online")
         
     @commands.command()
     async def leave(self, ctx):
@@ -120,11 +121,10 @@ class Music(commands.Cog):
         server = ctx.message.author.guild
         channel = ctx.voice_client
 
-        async with ctx.typing(): #Spotiboti is typing...
-            player = await YTDLSource.from_url(url, loop = self.bot.loop)
-            channel.play(player, after = lambda e: print('Player error: %s' % e) if e else None)
+        player = await YTDLSource.from_url(url, loop = self.bot.loop)
+        channel.play(player, after = lambda e: print('Player error: %s' % e) if e else None)
 
-        await ctx.send('Now playing: {}'.format(player.title))
+        await self.send_message(server, 'Now playing: {}'.format(player.title))
 
     @commands.command()
     async def pause(self, ctx):
@@ -135,7 +135,7 @@ class Music(commands.Cog):
         if channel.is_playing():
             channel.pause()
         else:
-            await ctx.send('No song playing')
+            await self.send_message(server, 'No song playing')
 
     @commands.command()
     async def resume(self, ctx):
@@ -146,7 +146,7 @@ class Music(commands.Cog):
         if channel.is_paused():
             channel.resume()
         else:
-            await ctx.send('No song paused')
+            await self.send_message(server, 'No song paused')
 
     #@commands.command()
     #async def stop(self, ctx):
@@ -174,7 +174,7 @@ class Music(commands.Cog):
         if channel.is_playing() or channel.is_paused():
             channel.stop()
         else:
-            await ctx.send("No current song")
+            await self.send_message(server, "No current song")
 
     @commands.command()
     async def volume(self, ctx, volume : int):
@@ -184,7 +184,7 @@ class Music(commands.Cog):
 
         async with ctx.typing():
             channel.source.volume = volume / 100
-            await ctx.send("Changed volume to {}%".format(volume))
+            await self.send_message(server, "Changed volume to {}%".format(volume))
 
     @commands.command()
     async def shuffle(self, ctx):
@@ -196,9 +196,9 @@ class Music(commands.Cog):
         async with ctx.typing():
             server_settings[server.id]['shuffle'] = not currentSetting
             if server_settings[server.id]['shuffle'] == True:
-                await ctx.send('Shuffle turned on')
+                await self.send_message(server, 'Shuffle turned on')
             else:
-                await ctx.send('Shuffle turned off')
+                await self.send_message(server, 'Shuffle turned off')
 
     def find_playlist_id(self, username, pl):
         """Find spotify playlist ID from name"""
@@ -211,13 +211,20 @@ class Music(commands.Cog):
                 return playlist['id']
         return False
 
+    async def send_message(self, server, message: str):
+        ctx = server_data[server.id]['ctx']
+        async with ctx.typing():
+            return await ctx.send(message)
+
     async def update_queue(self, server):
         shuffled = server_settings[server.id]['shuffle']
-        popInt = None
-
+        #playing_message = server_settings[server.id]['playing_message']
         ctx = server_data[server.id]['ctx']
+
         text_channel = ctx.channel
         voice_channel = ctx.voice_client
+
+        popInt = None
 
         if self.lastPlayer != None:
             print(self.lastPlayer)
@@ -227,25 +234,24 @@ class Music(commands.Cog):
         if self.stopped == True:
             self.stopped = False    
         else:
-            async with ctx.typing():
-                if full_queues[server.id] != []:
-                    player = None
-                    try:
-                        popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
-                        song = full_queues[server.id].pop(popInt)
-                        print('Downloading: ' + song)
-                        player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
-                        self.lastPlayer = filename
-                    except Exception as e:
-                        print(e)
-                        print('Error downloading: ' + song) 
-                    if player:
-                        await ctx.send('Now playing: ' + song)
-                        voice_channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server), voice_channel.loop))
-                    else:
-                        print("No player")
+            if full_queues[server.id] != []:
+                player = None
+                try:
+                    popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
+                    song = full_queues[server.id].pop(popInt)
+                    print('Downloading: ' + song)
+                    player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
+                    self.lastPlayer = filename
+                except Exception as e:
+                    print(e)
+                    print('Error downloading: ' + song) 
+                if player:
+                    await self.send_message(server, 'Now playing: ' + song)
+                    voice_channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server), voice_channel.loop))
                 else:
-                    print('Queue empty')
+                    print("No player")
+            else:
+                print('Queue empty')
 
     @commands.command()
     async def playlist(self, ctx, plQuery : str):
@@ -259,19 +265,19 @@ class Music(commands.Cog):
         if author in usernames:
             username = usernames[author]
         else:
-            return await ctx.send('Username not found')
+            return await self.send_message(server, 'Username not found')
             
         if plQuery.startswith('https://open.spotify.com/playlist/'):
             plQuery = plQuery[34:56]
             print("Playlist id = " + plQuery)
             playlist = getPlaylistFromId(plQuery, client_credentials_manager.get_access_token())
             if not playlist:
-                return await ctx.send('Playlist not found')
+                return await self.send_message(server, 'Playlist not found')
         else:       
             #Find ID of target playlist
             playlist_id = self.find_playlist_id(username, plQuery)
             if not playlist_id: 
-                return await ctx.send('Playlist not found') 
+                return await self.send_message(server, 'Playlist not found') 
             #Use ID to get playlist
             playlist = sp.user_playlist(username, playlist_id)
             
@@ -294,7 +300,7 @@ class Music(commands.Cog):
     async def _trace(self, ctx):
         sp.trace_out = not sp.trace_out
         sp.trace = not sp.trace
-        await ctx.send("Trace = {}".format(sp.trace))
+        await self.send_message(server, "Trace = {}".format(sp.trace))
 
 
 def setup(bot):
