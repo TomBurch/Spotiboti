@@ -256,13 +256,13 @@ class Music(commands.Cog):
 
         ctx = server_data[server.id]['ctx']
         channel = ctx.channel
-        #playing_message = server_data[server.id]['playing_message']
-        #lastMessage = channel.last_message_id
+        playing_message = server_data[server.id]['playing_message']
+        lastMessage = channel.last_message_id
 
-        #if overwrite:
-        #    if lastMessage == playing_message.id:
-        #        await playing_message.edit(message)          
-        #        return playing_message    
+        if overwrite:
+            if lastMessage == playing_message.id:
+                await playing_message.edit(content = message)         
+                return playing_message    
         await ctx.trigger_typing()
         return await ctx.send(message)
 
