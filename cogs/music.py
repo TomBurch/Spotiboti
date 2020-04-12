@@ -294,6 +294,11 @@ class Music(commands.Cog):
             else:
                 print('Queue empty')
 
+    #===Listeners===#
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        print('spotiboti is online')
 
 def setup(bot):
     bot.add_cog(Music(bot))

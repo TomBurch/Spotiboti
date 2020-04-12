@@ -8,7 +8,7 @@ load_dotenv()
 bot = commands.Bot(command_prefix = '.')
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-startup_extensions = ["admin", "events", "music"]
+startup_extensions = ["admin", "music"]
 
 if __name__ == "__main__":
     for extension in startup_extensions:
