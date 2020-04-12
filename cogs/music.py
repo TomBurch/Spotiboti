@@ -20,11 +20,11 @@ from SpotiInteract.utility import getPlaylistFromId
 #from Spotiboti import oauth2
 
 #Spotify variables
-usernames = {'BlartzelTheCat#6761' : 'moonfenceox', 
-    'WingWolf#8597' : 'epicwolf12', 
-    'Berkano#6571' : 'zjqmp49wss8eum0abwp8bj48w', 
-    'Simba12371#6037' : '1138992184', 
-    'PigRectum#4296' : 'ofrench560'}
+usernames = {   'BlartzelTheCat#6761'   : 'moonfenceox', 
+                'WingWolf#8597'         : 'epicwolf12', 
+                'Berkano#6571'          : 'zjqmp49wss8eum0abwp8bj48w', 
+                'Simba12371#6037'       : '1138992184', 
+                'PigRectum#4296'        : 'ofrench560'}
 
 client_id = os.getenv("SPOTIFY_ID")
 client_secret = os.getenv("SPOTIFY_SECRET")
@@ -214,7 +214,7 @@ class Music(commands.Cog):
                 return playlist['id']
         return False
 
-    async def update_queue(self, server, channel):
+    async def update_queue(self, server, channel, ctx):
         shuffled = settings[server.id]['shuffle']
         popInt = None
 
@@ -238,7 +238,8 @@ class Music(commands.Cog):
                     print(e)
                     print('Error downloading: ' + song) 
                 if player:
-                    channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server, channel), channel.loop))
+                    await ctx.send('Now playing: ' + song)
+                    channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server, channel, ctx), channel.loop))
                 else:
                     print("No player")
             else:
@@ -284,7 +285,7 @@ class Music(commands.Cog):
 
         full_queues[server.id] = songs
 
-        await self.update_queue(server, channel)
+        await self.update_queue(server, channel, ctx)
 
     @commands.command(name="trace", hidden=True)
     @commands.is_owner()
