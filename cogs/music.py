@@ -210,9 +210,13 @@ class Music(commands.Cog):
                 return playlist['id']
         return False
 
-    async def update_queue(self, server, channel, ctx):
+    async def update_queue(self, server):
         shuffled = server_settings[server.id]['shuffle']
         popInt = None
+
+        ctx = server_data[server.id]['ctx']
+        text_channel = ctx.channel
+        voice_channel = ctx.voice_client
 
         if self.lastPlayer != None:
             print(self.lastPlayer)
@@ -220,26 +224,27 @@ class Music(commands.Cog):
             self.lastPlayer = None
 
         if self.stopped == True:
-            self.stopped = False
+            self.stopped = False    
         else:
-            if full_queues[server.id] != []:
-                player = None
-                try:
-                    popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
-                    song = full_queues[server.id].pop(popInt)
-                    print('Downloading: ' + song)
-                    player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
-                    self.lastPlayer = filename
-                except Exception as e:
-                    print(e)
-                    print('Error downloading: ' + song) 
-                if player:
-                    await ctx.send('Now playing: ' + song)
-                    channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server, channel, ctx), channel.loop))
+            async with ctx.typing():
+                if full_queues[server.id] != []:
+                    player = None
+                    try:
+                        popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
+                        song = full_queues[server.id].pop(popInt)
+                        print('Downloading: ' + song)
+                        player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
+                        self.lastPlayer = filename
+                    except Exception as e:
+                        print(e)
+                        print('Error downloading: ' + song) 
+                    if player:
+                        await ctx.send('Now playing: ' + song)
+                        voice_channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server), voice_channel.loop))
+                    else:
+                        print("No player")
                 else:
-                    print("No player")
-            else:
-                print('Queue empty')
+                    print('Queue empty')
 
     @commands.command()
     async def playlist(self, ctx, plQuery : str):
@@ -281,7 +286,7 @@ class Music(commands.Cog):
 
         full_queues[server.id] = songs
 
-        await self.update_queue(server, channel, ctx)
+        await self.update_queue(server)
 
     @commands.command(name="trace", hidden=True)
     @commands.is_owner()
