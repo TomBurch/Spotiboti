@@ -182,8 +182,9 @@ class Music(commands.Cog):
 
         channel = ctx.voice_client
 
-        channel.source.volume = volume / 100
-        await ctx.send("Changed volume to {}%".format(volume))
+        async with ctx.typing():
+            channel.source.volume = volume / 100
+            await ctx.send("Changed volume to {}%".format(volume))
 
     @commands.command()
     async def shuffle(self, ctx):
@@ -192,12 +193,12 @@ class Music(commands.Cog):
         server = ctx.message.guild   
         currentSetting = server_settings[server.id]['shuffle']
 
-        server_settings[server.id]['shuffle'] = not currentSetting
-
-        if server_settings[server.id]['shuffle'] == True:
-            await ctx.send('Shuffle turned on')
-        else:
-            await ctx.send('Shuffle turned off')
+        async with ctx.typing():
+            server_settings[server.id]['shuffle'] = not currentSetting
+            if server_settings[server.id]['shuffle'] == True:
+                await ctx.send('Shuffle turned on')
+            else:
+                await ctx.send('Shuffle turned off')
 
     def find_playlist_id(self, username, pl):
         """Find spotify playlist ID from name"""
