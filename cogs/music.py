@@ -9,8 +9,6 @@ import re
 import discord
 from discord.ext import commands
 
-_loop = asyncio.get_event_loop()
-
 import youtube_dl
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -276,7 +274,7 @@ class Music(commands.Cog):
         popInt = None
 
         if self.lastPlayer != None:
-            print(self.lastPlayer)
+            #print(self.lastPlayer)
             os.unlink(self.lastPlayer)
             self.lastPlayer = None
 
