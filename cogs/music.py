@@ -28,9 +28,6 @@ client_secret = os.getenv("SPOTIFY_SECRET")
 client_credentials_manager = SpotifyClientCredentials(client_id, client_secret)
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
 
-full_queues = {}
-server_settings = {}
-server_data = {}
 
 ytdl_format_options = {
     'format': 'bestaudio/best',
@@ -91,6 +88,9 @@ class Music(commands.Cog):
         self.lastPlayer = None
         self.stopped = False
         self.server = None
+        self.settings = {}
+        self.data = {}
+        self.queue = []
 
     #===Commands===#
   
@@ -100,13 +100,13 @@ class Music(commands.Cog):
 
         self.server = ctx.message.guild
         channel = ctx.message.author.voice.channel
-        server_settings[self.server.id] = {'shuffle' : False}
-        server_data[self.server.id] = {'ctx' : ctx,
-                                  'prev_message' : None}
+        self.settings = {'shuffle' : False}
+        self.data = {'ctx' : ctx,
+                     'prev_message' : None}
 
         await channel.connect()
         message = await self.send_message("Spotiboti is online")
-        server_data[self.server.id]['prev_message'] = message 
+        self.data['prev_message'] = message 
         
     @commands.command()
     async def leave(self, ctx):
@@ -131,7 +131,7 @@ class Music(commands.Cog):
     async def pause(self, ctx):
         """Pauses the current song"""
 
-        channel = ctx.voice_client
+        channel = self.data["ctx"].voice_client
 
         if channel.is_playing():
             channel.pause()
@@ -142,7 +142,7 @@ class Music(commands.Cog):
     async def resume(self, ctx):
         """Resumes the current song"""
 
-        channel = ctx.voice_client
+        channel = self.data["ctx"].voice_client
 
         if channel.is_paused():
             channel.resume()
@@ -153,7 +153,7 @@ class Music(commands.Cog):
     async def skip(self, ctx):
         """Skip the current song"""
 
-        channel = ctx.voice_client
+        channel = self.data["ctx"].voice_client
 
         if channel.is_playing() or channel.is_paused():
             channel.stop()
@@ -164,7 +164,7 @@ class Music(commands.Cog):
     async def volume(self, ctx, volume: int):
         """Changes the player's volume from 0-200"""
 
-        channel = ctx.voice_client
+        channel = self.data["ctx"].voice_client
 
         async with ctx.typing():
             channel.source.volume = volume / 100
@@ -174,10 +174,10 @@ class Music(commands.Cog):
     async def shuffle(self, ctx):
         """Turn shuffle on/off"""
 
-        currentSetting = server_settings[self.server.id]['shuffle']
+        currentSetting = self.settings['shuffle']
+        self.settings['shuffle'] = not currentSetting
 
-        server_settings[self.server.id]['shuffle'] = not currentSetting
-        if server_settings[self.server.id]['shuffle'] == True:
+        if self.settings['shuffle'] == True:
             await self.send_message('Shuffle turned on')
         else:
             await self.send_message('Shuffle turned off')
@@ -205,7 +205,7 @@ class Music(commands.Cog):
             return
         
         await self.send_message('Retrieving playlist')
-        full_queues[self.server.id] = getPlaylistFromId(playlist_id, client_credentials_manager.get_access_token())
+        self.queue = getPlaylistFromId(playlist_id, client_credentials_manager.get_access_token())
 
         await self.update_queue()
 
@@ -225,9 +225,9 @@ class Music(commands.Cog):
     async def send_message(self, message: str, overwrite: bool = False, immutable: bool = True):
         """Send a message to the text channel"""
 
-        ctx = server_data[self.server.id]['ctx']
+        ctx = self.data['ctx']
         channel = ctx.channel
-        prevMessage = server_data[self.server.id]['prev_message']
+        prevMessage = self.data['prev_message']
         newMessage = None
 
         if overwrite and (channel.last_message_id == prevMessage.id):
@@ -238,13 +238,13 @@ class Music(commands.Cog):
             newMessage = await ctx.send(message)
         
         if not immutable:
-            server_data[self.server.id]['prev_message'] = newMessage
+            self.data['prev_message'] = newMessage
 
         return newMessage
 
     async def update_queue(self):
-        shuffled = server_settings[self.server.id]['shuffle']
-        ctx = server_data[self.server.id]['ctx']
+        shuffled = self.settings['shuffle']
+        ctx = self.data['ctx']
 
         text_channel = ctx.channel
         voice_channel = ctx.voice_client
@@ -259,11 +259,11 @@ class Music(commands.Cog):
         if self.stopped == True:
             self.stopped = False    
         else:
-            if full_queues[self.server.id] != []:
+            if self.queue != []:
                 player = None
                 try:
-                    popInt = random.randint(0, len(full_queues[self.server.id])) if shuffled else 0
-                    song = full_queues[self.server.id].pop(popInt)
+                    popInt = random.randint(0, len(self.queue)) if shuffled else 0
+                    song = self.queue.pop(popInt)
                     print('Downloading: ' + song)
                     await self.send_message('Downloading: ' + song, overwrite = True, immutable = False)
                     player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
@@ -285,7 +285,7 @@ class Music(commands.Cog):
     async def on_ready(self):
         print('spotiboti is online')
 
-        if full_queues != {}:
+        if self.queue != []:
             print("Resuming songs")
             await self.update_queue()
 
