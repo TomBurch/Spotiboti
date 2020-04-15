@@ -112,7 +112,8 @@ class Music(commands.Cog):
     async def leave(self, ctx):
         """Disconnects the bot from voice channel"""
 
-        await ctx.voice_client.disconnect()
+        channel = self.data['ctx'].voice_client
+        await channel.disconnect()
 
 #    @commands.command()
 #    async def play(self, ctx, *, url: str):
