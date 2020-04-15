@@ -36,7 +36,7 @@ class AccessToken(object):
 
         if r.status_code != 200:
             print("Spotify authorization error:")
-            print(response.reason)
+            print(r.reason)
 
         tokenData = r.json()
         return tokenData
