@@ -102,11 +102,11 @@ class Music(commands.Cog):
         channel = ctx.message.author.voice.channel
         server_settings[self.server.id] = {'shuffle' : False}
         server_data[self.server.id] = {'ctx' : ctx,
-                                  'playing_message' : None}
+                                  'prev_message' : None}
 
         await channel.connect()
         message = await self.send_message(self.server, "Spotiboti is online")
-        server_data[self.server.id]['playing_message'] = message 
+        server_data[self.server.id]['prev_message'] = message 
         
     @commands.command()
     async def leave(self, ctx):
@@ -234,20 +234,25 @@ class Music(commands.Cog):
                 return playlist['id']
         return False
 
-    async def send_message(self, server, message: str, overwrite: bool = False):
+    async def send_message(self, server, message: str, overwrite: bool = False, immutable: bool = True):
         """Send a message to the text channel"""
 
         ctx = server_data[server.id]['ctx']
         channel = ctx.channel
-        playing_message = server_data[server.id]['playing_message']
-        lastMessage = channel.last_message_id
+        prevMessage = server_data[server.id]['prev_message']
+        newMessage = None
 
-        if overwrite:
-            if lastMessage == playing_message.id:
-                await playing_message.edit(content = message)         
-                return playing_message    
-        await ctx.trigger_typing()
-        return await ctx.send(message)
+        if overwrite and (channel.last_message_id == prevMessage.id):
+            await prevMessage.edit(content = message)         
+            newMessage = prevMessage
+        else:
+            await ctx.trigger_typing()
+            newMessage = await ctx.send(message)
+        
+        if not immutable:
+            server_data[server.id]['prev_message'] = newMessage
+
+        return newMessage
 
     async def update_queue(self, server):
         shuffled = server_settings[server.id]['shuffle']
@@ -272,15 +277,13 @@ class Music(commands.Cog):
                     popInt = random.randint(0, len(full_queues[server.id])) if shuffled else 0
                     song = full_queues[server.id].pop(popInt)
                     print('Downloading: ' + song)
-                    message = await self.send_message(server, 'Downloading: ' + song, overwrite = True)
-                    server_data[server.id]['playing_message'] = message
+                    await self.send_message(server, 'Downloading: ' + song, overwrite = True, immutable = False)
                     player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
                     self.lastPlayer = filename
                 except Exception as e:
                     print(e)
                 if player:
-                    message = await self.send_message(server, 'Now playing: ' + song, overwrite = True)
-                    server_data[server.id]['playing_message'] = message
+                    await self.send_message(server, 'Now playing: ' + song, overwrite = True, immutable = False)
                     voice_channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(server), voice_channel.loop))
                 else:
                     print("No player")
