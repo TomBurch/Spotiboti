@@ -199,33 +199,17 @@ class Music(commands.Cog):
             await self.send_message(server, 'Username not found')
             return
             
+        playlist_id = None
         if plQuery.startswith('https://open.spotify.com/playlist/'):
-            plQuery = plQuery[34:56]
-            print("Playlist id = " + plQuery)
-            playlist = getPlaylistFromId(plQuery, client_credentials_manager.get_access_token())
-            if not playlist:
-                await self.send_message(server, 'Playlist not found')
-                return
+            playlist_id = plQuery[34:56]
         else:       
-            #Find ID of target playlist
             playlist_id = self.find_playlist_id(username, plQuery)
-            if not playlist_id: 
-                await self.send_message(server, 'Playlist not found')
-                return
-            #Use ID to get playlist
-            playlist = sp.user_playlist(username, playlist_id)
+
+        if not playlist_id: 
+            await self.send_message(server, 'Playlist not found')
+            return
             
-
-        #Create table of songs from playlist
-        tracks = playlist['tracks']['items']
-        songs = []
-        for track in tracks:
-            track = track['track']
-            song = '{} - {}'.format(track['artists'][0]['name'], track['name'])
-            song = re.sub('[/]', ' ', song) # '/' in string causes http errors
-            songs.append(song)
-
-        full_queues[server.id] = songs
+        full_queues[server.id] = getPlaylistFromId(playlist_id, client_credentials_manager.get_access_token())
 
         await self.update_queue(server)
 
