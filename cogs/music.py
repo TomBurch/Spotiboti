@@ -28,7 +28,6 @@ client_secret = os.getenv("SPOTIFY_SECRET")
 client_credentials_manager = SpotifyClientCredentials(client_id, client_secret)
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
 
-load_queues = {}
 full_queues = {}
 server_settings = {}
 server_data = {}
@@ -91,6 +90,7 @@ class Music(commands.Cog):
         self.bot = bot
         self.lastPlayer = None
         self.stopped = False
+        self.server = None
 
     #===Commands===#
   
@@ -98,15 +98,15 @@ class Music(commands.Cog):
     async def join(self, ctx):
         """Connects the bot to your voice channel"""
 
-        server = ctx.message.guild
+        self.server = ctx.message.guild
         channel = ctx.message.author.voice.channel
-        server_settings[server.id] = {'shuffle' : False}
-        server_data[server.id] = {'ctx' : ctx,
+        server_settings[self.server.id] = {'shuffle' : False}
+        server_data[self.server.id] = {'ctx' : ctx,
                                   'playing_message' : None}
 
         await channel.connect()
-        message = await self.send_message(server, "Spotiboti is online")
-        server_data[server.id]['playing_message'] = message 
+        message = await self.send_message(self.server, "Spotiboti is online")
+        server_data[self.server.id]['playing_message'] = message 
         
     @commands.command()
     async def leave(self, ctx):
@@ -307,6 +307,10 @@ class Music(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         print('spotiboti is online')
+        if full_queues != {}:
+            print("Resuming songs")
+            await self.update_queue(self.server)
+
 
 def setup(bot):
     bot.add_cog(Music(bot))
