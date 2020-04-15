@@ -115,19 +115,6 @@ class Music(commands.Cog):
         channel = self.data['ctx'].voice_client
         await channel.disconnect()
 
-#    @commands.command()
-#    async def play(self, ctx, *, url: str):
-#        """Plays the song from youtube url"""
-#
-#        print(url)
-#        server = ctx.message.author.guild
-#        channel = ctx.voice_client
-#
-#        player = await YTDLSource.from_url(url, loop = self.bot.loop)
-#        channel.play(player, after = lambda e: print('Player error: %s' % e) if e else None)
-#
-#        await self.send_message(server, 'Now playing: {}'.format(player.title))
-
     @commands.command()
     async def pause(self, ctx):
         """Pauses the current song"""
@@ -182,6 +169,19 @@ class Music(commands.Cog):
             await self.send_message('Shuffle turned on')
         else:
             await self.send_message('Shuffle turned off')
+
+#    @commands.command()
+#    async def play(self, ctx, *, url: str):
+#        """Plays the song from youtube url"""
+#
+#        print(url)
+#        server = ctx.message.author.guild
+#        channel = ctx.voice_client
+#
+#        player = await YTDLSource.from_url(url, loop = self.bot.loop)
+#        channel.play(player, after = lambda e: print('Player error: %s' % e) if e else None)
+#
+#        await self.send_message(server, 'Now playing: {}'.format(player.title))
 
     @commands.command()
     async def playlist(self, ctx, plQuery: str):
