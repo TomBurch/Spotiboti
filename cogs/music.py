@@ -208,7 +208,8 @@ class Music(commands.Cog):
         if not playlist_id: 
             await self.send_message(server, 'Playlist not found')
             return
-            
+        
+        await self.send_message(server, 'Retrieving playlist')
         full_queues[server.id] = getPlaylistFromId(playlist_id, client_credentials_manager.get_access_token())
 
         await self.update_queue(server)
