@@ -85,7 +85,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.lastPlayer = None
         self.stopped = False
         self.server = None
         self.settings = {}
@@ -252,11 +251,6 @@ class Music(commands.Cog):
 
         popInt = None
 
-        if self.lastPlayer != None:
-            #print(self.lastPlayer)
-            os.unlink(self.lastPlayer)
-            self.lastPlayer = None
-
         if self.stopped == True:
             self.stopped = False    
         else:
@@ -268,7 +262,6 @@ class Music(commands.Cog):
                     print('Downloading: ' + song)
                     await self.send_message('Downloading: ' + song, overwrite = True, immutable = False)
                     player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
-                    self.lastPlayer = filename
                 except Exception as e:
                     print(e)
 
