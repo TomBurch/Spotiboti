@@ -163,8 +163,7 @@ class Music(commands.Cog):
     async def shuffle(self, ctx):
         """Turn shuffle on/off"""
 
-        currentSetting = self.settings['shuffle']
-        self.settings['shuffle'] = not currentSetting
+        self.settings['shuffle'] = not self.settings['shuffle']
 
         if self.settings['shuffle'] == True:
             await self.send_message('Shuffle turned on')
