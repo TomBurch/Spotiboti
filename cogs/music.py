@@ -99,11 +99,12 @@ class Music(commands.Cog):
 
         self.server = ctx.message.guild
         self.settings = {'shuffle' : False}
-        self.data = {'ctx' : ctx,
-                     'prev_message' : None,
+        self.data = {'prev_message' : None,
+                     'text_channel' : None,
                      'voice_channel' : None,
                      'voice_client' : None}
 
+        self.data['text_channel'] = ctx.channel
         self.data['voice_channel'] = ctx.message.author.voice.channel
         self.data['voice_client'] = await self.data['voice_channel'].connect()
         self.data['prev_message'] = await self.send_message("Spotiboti is online")
@@ -112,17 +113,17 @@ class Music(commands.Cog):
     async def leave(self, ctx):
         """Disconnects the bot from voice channel"""
 
-        channel = self.data['ctx'].voice_client
-        await channel.disconnect()
+        voice_client = self.data['voice_client']
+        await voice_client.disconnect()
 
     @commands.command()
     async def pause(self, ctx):
         """Pauses the current song"""
 
-        channel = self.data["ctx"].voice_client
+        voice_client = self.data['voice_client']
 
-        if channel.is_playing():
-            channel.pause()
+        if voice_client.is_playing():
+           voice_client.pause()
         else:
             await self.send_message("No song playing")
 
@@ -130,10 +131,10 @@ class Music(commands.Cog):
     async def resume(self, ctx):
         """Resumes the current song"""
 
-        channel = self.data["ctx"].voice_client
+        voice_client = self.data['voice_client']
 
-        if channel.is_paused():
-            channel.resume()
+        if voice_client.is_paused():
+            voice_client.resume()
         else:
             await self.send_message("No song paused")
 
@@ -141,10 +142,10 @@ class Music(commands.Cog):
     async def skip(self, ctx):
         """Skip the current song"""
 
-        channel = self.data["ctx"].voice_client
+        voice_client = self.data['voice_client']
 
-        if channel.is_playing() or channel.is_paused():
-            channel.stop()
+        if voice_client.is_playing() or voice_client.is_paused():
+            voice_client.stop()
         else:
             await self.send_message("No current song")
 
@@ -152,10 +153,10 @@ class Music(commands.Cog):
     async def volume(self, ctx, volume: int):
         """Changes the player's volume from 0-200"""
 
-        channel = self.data["ctx"].voice_client
+        voice_client = self.data['voice_client']
 
         async with ctx.typing():
-            channel.source.volume = volume / 100
+            voice_client.source.volume = volume / 100
             await self.send_message("Changed volume to {}%".format(volume))
 
     @commands.command()
@@ -226,17 +227,16 @@ class Music(commands.Cog):
     async def send_message(self, message: str, overwrite: bool = False, immutable: bool = True):
         """Send a message to the text channel"""
 
-        ctx = self.data['ctx']
-        channel = ctx.channel
-        prevMessage = self.data['prev_message']
+        text_channel = self.data['text_channel']
+        prev_message = self.data['prev_message']
         newMessage = None
 
-        if overwrite and (channel.last_message_id == prevMessage.id):
-            await prevMessage.edit(content = message)         
-            newMessage = prevMessage
+        if overwrite and (text_channel.last_message_id == prev_message.id):
+            await prev_message.edit(content = message)         
+            newMessage = prev_message
         else:
-            await ctx.trigger_typing()
-            newMessage = await ctx.send(message)
+            await text_channel.trigger_typing()
+            newMessage = await text_channel.send(message)
         
         if not immutable:
             self.data['prev_message'] = newMessage
@@ -245,7 +245,6 @@ class Music(commands.Cog):
 
     async def update_queue(self):
         shuffled = self.settings['shuffle']
-        ctx = self.data['ctx']
         voice_client = self.data['voice_client']
 
         if self.stopped == True:
