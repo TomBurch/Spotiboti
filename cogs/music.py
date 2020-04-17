@@ -189,7 +189,7 @@ class Music(commands.Cog):
         song = " ".join(map(str, args))
 
         self.queue.append(song)
-        await self.send_message('Added {} to queue'.format(song))
+        await self.send_message('Queued: ' + song)
 
         if not voice_client.is_playing():
             await self.update_queue()
