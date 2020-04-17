@@ -170,6 +170,18 @@ class Music(commands.Cog):
             await self.send_message('Shuffle turned off')
 
     @commands.command()
+    async def clear(self, ctx):
+        """Clear the queue"""
+        
+        voice_client = self.data['voice_client']
+
+        self.queue = []
+        if voice_client.is_playing():
+            voice_client.stop()
+            
+        await self.send_message('Queue cleared')
+    
+    @commands.command()
     async def play(self, ctx, *args: str):
         """Plays song by name"""
 
