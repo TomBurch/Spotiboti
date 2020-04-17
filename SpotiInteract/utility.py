@@ -34,4 +34,3 @@ def getPlaylistFromId(id, access_token):
         params["offset"] = params["offset"] + 100
 
     return playlist
-

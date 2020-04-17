@@ -98,14 +98,15 @@ class Music(commands.Cog):
         """Connects the bot to your voice channel"""
 
         self.server = ctx.message.guild
-        channel = ctx.message.author.voice.channel
         self.settings = {'shuffle' : False}
         self.data = {'ctx' : ctx,
-                     'prev_message' : None}
+                     'prev_message' : None,
+                     'voice_channel' : None,
+                     'voice_client' : None}
 
-        await channel.connect()
-        message = await self.send_message("Spotiboti is online")
-        self.data['prev_message'] = message 
+        self.data['voice_channel'] = ctx.message.author.voice.channel
+        self.data['voice_client'] = await self.data['voice_channel'].connect()
+        self.data['prev_message'] = await self.send_message("Spotiboti is online")
         
     @commands.command()
     async def leave(self, ctx):
@@ -245,11 +246,7 @@ class Music(commands.Cog):
     async def update_queue(self):
         shuffled = self.settings['shuffle']
         ctx = self.data['ctx']
-
-        text_channel = ctx.channel
-        voice_channel = ctx.voice_client
-
-        popInt = None
+        voice_client = self.data['voice_client']
 
         if self.stopped == True:
             self.stopped = False    
@@ -267,7 +264,7 @@ class Music(commands.Cog):
 
                 if player:
                     await self.send_message('Now playing: ' + song, overwrite = True, immutable = False)
-                    voice_channel.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(), voice_channel.loop))
+                    voice_client.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(), voice_client.loop))
                 else:
                     print("No player")
             else:
@@ -281,6 +278,7 @@ class Music(commands.Cog):
 
         if self.queue != []:
             print("Resuming songs")
+            self.data['voice_client'] = await self.data['voice_channel'].connect()
             await self.update_queue()
 
 
