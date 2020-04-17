@@ -226,7 +226,7 @@ class Music(commands.Cog):
                 return playlist['id']
         return False
 
-    async def send_message(self, message: str, overwrite: bool = False, immutable: bool = True):
+    async def send_message(self, message: str, overwrite: bool = False, immutable: bool = False):
         """Send a message to the text channel"""
 
         text_channel = self.data['text_channel']
