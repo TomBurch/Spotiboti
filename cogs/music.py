@@ -85,7 +85,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
 class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.stopped = False
         self.server = None
         self.settings = {}
         self.data = {}
@@ -170,22 +169,24 @@ class Music(commands.Cog):
         else:
             await self.send_message('Shuffle turned off')
 
-#    @commands.command()
-#    async def play(self, ctx, *, url: str):
-#        """Plays the song from youtube url"""
-#
-#        print(url)
-#        server = ctx.message.author.guild
-#        channel = ctx.voice_client
-#
-#        player = await YTDLSource.from_url(url, loop = self.bot.loop)
-#        channel.play(player, after = lambda e: print('Player error: %s' % e) if e else None)
-#
-#        await self.send_message(server, 'Now playing: {}'.format(player.title))
+    @commands.command()
+    async def play(self, ctx, *args: str):
+        """Plays song by name"""
+
+        voice_client = self.data['voice_client']
+        song = " ".join(map(str, args))
+
+        self.queue.append(song)
+        await self.send_message('Added {} to queue'.format(song))
+
+        if not voice_client.is_playing():
+            await self.update_queue()
 
     @commands.command()
     async def playlist(self, ctx, plQuery: str):
         """Queues up a spotify playlist"""
+
+        voice_client = self.data['voice_client']
 
         #Convert discord name to spotify name
         author = str(ctx.message.author)
@@ -206,9 +207,11 @@ class Music(commands.Cog):
             return
         
         await self.send_message('Retrieving playlist')
-        self.queue = getPlaylistFromId(playlist_id, client_credentials_manager.get_access_token())
+        self.queue += getPlaylistFromId(playlist_id, client_credentials_manager.get_access_token())
+        await self.send_message('Playlist retrieved', overwrite = True)
 
-        await self.update_queue()
+        if not voice_client.is_playing():
+            await self.update_queue()
 
     #===Utility===#
    
@@ -245,28 +248,25 @@ class Music(commands.Cog):
     async def update_queue(self):
         shuffled = self.settings['shuffle']
         voice_client = self.data['voice_client']
+ 
+        if self.queue != []:
+            player = None
+            try:
+                popInt = random.randint(0, len(self.queue)) if shuffled else 0
+                song = self.queue.pop(popInt)
+                print('Downloading: ' + song)
+                await self.send_message('Downloading: ' + song, overwrite = True, immutable = False)
+                player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
+            except Exception as e:
+                print(e)
 
-        if self.stopped == True:
-            self.stopped = False    
-        else:
-            if self.queue != []:
-                player = None
-                try:
-                    popInt = random.randint(0, len(self.queue)) if shuffled else 0
-                    song = self.queue.pop(popInt)
-                    print('Downloading: ' + song)
-                    await self.send_message('Downloading: ' + song, overwrite = True, immutable = False)
-                    player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
-                except Exception as e:
-                    print(e)
-
-                if player:
-                    await self.send_message('Now playing: ' + song, overwrite = True, immutable = False)
-                    voice_client.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(), voice_client.loop))
-                else:
-                    print("No player")
+            if player:
+                await self.send_message('Now playing: ' + song, overwrite = True, immutable = False)
+                voice_client.play(player, after = lambda e: asyncio.run_coroutine_threadsafe(self.update_queue(), voice_client.loop))
             else:
-                print('Queue empty')
+                print("No player")
+        else:
+            print('Queue empty')
 
     #===Listeners===#
 
