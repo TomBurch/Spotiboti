@@ -183,10 +183,11 @@ class Music(commands.Cog):
             await self.update_queue()
 
     @commands.command()
-    async def playlist(self, ctx, plQuery: str):
+    async def playlist(self, ctx, *args: str):
         """Queues up a spotify playlist"""
 
         voice_client = self.data['voice_client']
+        plQuery = " ".join(map(str, args))
 
         #Convert discord name to spotify name
         author = str(ctx.message.author)
@@ -219,10 +220,8 @@ class Music(commands.Cog):
         """Find spotify playlist ID from name"""
 
         playlists = sp.user_playlists(username)
-        print('pl: ' + pl)
         for playlist in playlists['items']:
-            print(playlist['name'])
-            if playlist['name'].lower() == pl:
+            if playlist['name'].lower() == pl.lower():
                 return playlist['id']
         return False
 
