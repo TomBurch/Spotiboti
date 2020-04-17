@@ -80,7 +80,26 @@ class YTDLSource(discord.PCMVolumeTransformer):
         filename = data['url'] if stream else ytdl.prepare_filename(data)
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data = data), filename
 
+class Queue():
+    def __init__(self, contents):
+        self.contents = contents
+        self.currentPage = 0
+        self.pageLength = 10
+        self.message = None
 
+    def getPage(self):
+        offset = self.currentPage * self.pageLength
+        return self.contents[offset : offset + self.pageLength]
+
+    def formatPage(self):
+        pageStr = ''
+        i = 0
+        for song in self.getPage():
+            songNum = (self.currentPage * self.pageLength) + i
+            pageStr += "{}. {}\n".format(str(songNum + 1), self.contents[songNum])
+            i += 1
+            
+        return pageStr
 
 class Music(commands.Cog):
     def __init__(self, bot):
@@ -225,6 +244,11 @@ class Music(commands.Cog):
 
         if not voice_client.is_playing():
             await self.update_queue()
+
+    @commands.command()
+    async def queue(self, ctx):
+        queue = Queue(self.queue)
+        await self.send_message(queue.formatPage())
 
     #===Utility===#
    
