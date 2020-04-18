@@ -23,7 +23,6 @@ client_secret = os.getenv("SPOTIFY_SECRET")
 client_credentials_manager = SpotifyClientCredentials(client_id, client_secret)
 sp = spotipy.Spotify(client_credentials_manager = client_credentials_manager)
 
-
 ytdl_format_options = {
     'format': 'bestaudio/best',
     'outtmpl': 'audio_cache/%(extractor)s-%(id)s-%(title)s.%(ext)s',
@@ -102,6 +101,7 @@ class Music(commands.Cog):
         self.server = None
         self.data = {}
         self.queue = Queue([])
+        self.currentSong = None
 
     #===Commands===#
   
@@ -279,6 +279,11 @@ class Music(commands.Cog):
 
     async def update_queue(self):
         voice_client = self.data['voice_client']
+
+        try:
+            os.remove(self.currentSong)
+        except Exception as e:
+            print(e)
  
         if self.queue != []:
             player = None
@@ -287,6 +292,7 @@ class Music(commands.Cog):
                 print('Downloading: ' + song)
                 await self.send_message('Downloading: ' + song, overwrite = True, immutable = False)
                 player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
+                self.currentSong = filename
             except Exception as e:
                 print(e)
 
