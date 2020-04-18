@@ -81,22 +81,22 @@ class YTDLSource(discord.PCMVolumeTransformer):
         return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data = data), filename
 
 class Queue():
-    def __init__(self, contents):
-        self.contents = contents
+    def __init__(self, content):
+        self.content = content
         self.currentPage = 0
         self.pageLength = 10
         self.message = None
 
     def getPage(self):
         offset = self.currentPage * self.pageLength
-        return self.contents[offset : offset + self.pageLength]
+        return self.content[offset : offset + self.pageLength]
 
     def formatPage(self):
         pageStr = ''
         i = 0
         for song in self.getPage():
             songNum = (self.currentPage * self.pageLength) + i
-            pageStr += "{}. {}\n".format(str(songNum + 1), self.contents[songNum])
+            pageStr += "{}. {}\n".format(str(songNum + 1), self.content[songNum])
             i += 1
             
         return pageStr
@@ -106,7 +106,7 @@ class Music(commands.Cog):
         self.bot = bot
         self.server = None
         self.data = {}
-        self.queue = []
+        self.queue = Queue([])
 
     #===Commands===#
   
@@ -179,15 +179,15 @@ class Music(commands.Cog):
     @commands.command()
     async def shuffle(self, ctx):
         """Shuffle the queue"""
-        
+
         newQueue = []
         await self.send_message('Shuffling...')
 
-        for i in range(0, len(self.queue) - 1):
-            song = self.queue.pop(random.randint(0, len(self.queue) - 1))
+        for i in range(0, len(self.queue.content) - 1):
+            song = self.queue.content.pop(random.randint(0, len(self.queue.content) - 1))
             newQueue.append(song)
 
-        self.queue = newQueue
+        self.queue.content = newQueue
         await self.send_message('Shuffled', overwrite = True)
    
     @commands.command()
@@ -196,7 +196,7 @@ class Music(commands.Cog):
         
         voice_client = self.data['voice_client']
 
-        self.queue = []
+        self.queue.content = []
         if voice_client.is_playing():
             voice_client.stop()
             
@@ -209,7 +209,7 @@ class Music(commands.Cog):
         voice_client = self.data['voice_client']
         song = " ".join(map(str, args))
 
-        self.queue.append(song)
+        self.queue.content.append(song)
         await self.send_message('Queued: ' + song)
 
         if not voice_client.is_playing():
@@ -241,16 +241,16 @@ class Music(commands.Cog):
             return
         
         await self.send_message('Retrieving playlist')
-        self.queue += getPlaylistFromId(playlist_id, client_credentials_manager.get_access_token())
+        self.queue.content += getPlaylistFromId(playlist_id, client_credentials_manager.get_access_token())
         await self.send_message('Playlist retrieved', overwrite = True)
 
         if not voice_client.is_playing():
             await self.update_queue()
 
     @commands.command()
-    async def queue(self, ctx):
-        queue = Queue(self.queue)
-        await self.send_message(queue.formatPage())
+    async def queue(self, ctx, page):
+        self.queue.currentPage = int(page) - 1
+        await self.send_message(self.queue.formatPage())
 
     #===Utility===#
    
@@ -288,8 +288,8 @@ class Music(commands.Cog):
         if self.queue != []:
             player = None
             try:
-                popInt = random.randint(0, len(self.queue))
-                song = self.queue.pop(popInt)
+                popInt = random.randint(0, len(self.queue.content))
+                song = self.queue.content.pop(popInt)
                 print('Downloading: ' + song)
                 await self.send_message('Downloading: ' + song, overwrite = True, immutable = False)
                 player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
@@ -310,7 +310,7 @@ class Music(commands.Cog):
     async def on_ready(self):
         print('spotiboti is online')
 
-        if self.queue != []:
+        if self.queue.content != []:
             print("Resuming songs")
             self.data['voice_client'] = await self.data['voice_channel'].connect()
             await self.update_queue()
