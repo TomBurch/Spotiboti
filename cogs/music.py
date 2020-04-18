@@ -105,7 +105,6 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.server = None
-        self.settings = {}
         self.data = {}
         self.queue = []
 
@@ -179,15 +178,18 @@ class Music(commands.Cog):
 
     @commands.command()
     async def shuffle(self, ctx):
-        """Turn shuffle on/off"""
+        """Shuffle the queue"""
+        
+        newQueue = []
+        await self.send_message('Shuffling...')
 
-        self.settings['shuffle'] = not self.settings['shuffle']
+        for i in range(0, len(self.queue) - 1):
+            song = self.queue.pop(random.randint(0, len(self.queue) - 1))
+            newQueue.append(song)
 
-        if self.settings['shuffle'] == True:
-            await self.send_message('Shuffle turned on')
-        else:
-            await self.send_message('Shuffle turned off')
-
+        self.queue = newQueue
+        await self.send_message('Shuffled', overwrite = True)
+   
     @commands.command()
     async def clear(self, ctx):
         """Clear the queue"""
@@ -281,13 +283,12 @@ class Music(commands.Cog):
         return newMessage
 
     async def update_queue(self):
-        shuffled = self.settings['shuffle']
         voice_client = self.data['voice_client']
  
         if self.queue != []:
             player = None
             try:
-                popInt = random.randint(0, len(self.queue)) if shuffled else 0
+                popInt = random.randint(0, len(self.queue))
                 song = self.queue.pop(popInt)
                 print('Downloading: ' + song)
                 await self.send_message('Downloading: ' + song, overwrite = True, immutable = False)
