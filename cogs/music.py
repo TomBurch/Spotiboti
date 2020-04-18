@@ -283,8 +283,7 @@ class Music(commands.Cog):
         if self.queue != []:
             player = None
             try:
-                popInt = random.randint(0, len(self.queue.content))
-                song = self.queue.content.pop(popInt)
+                song = self.queue.content.pop(0)
                 print('Downloading: ' + song)
                 await self.send_message('Downloading: ' + song, overwrite = True, immutable = False)
                 player, filename = await YTDLSource.from_name(song, loop = self.bot.loop)
