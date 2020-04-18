@@ -245,7 +245,7 @@ class Music(commands.Cog):
     @commands.command()
     async def queue(self, ctx, page):
         self.queue.currentPage = int(page) - 1
-        await self.send_message(self.queue.formatPage())
+        await self.send_message(self.queue.formatPage(), immutable = True)
 
     #===Utility===#
    
