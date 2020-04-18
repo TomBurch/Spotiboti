@@ -1,6 +1,7 @@
 import time
 import sys
 import os
+import ast
 from json.decoder import JSONDecodeError
 import asyncio
 import random
@@ -15,13 +16,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 
 from SpotiInteract.utility import getPlaylistFromId
 
-#Spotify variables
-usernames = {   'BlartzelTheCat#6761'   : 'moonfenceox', 
-                'WingWolf#8597'         : 'epicwolf12', 
-                'Berkano#6571'          : 'zjqmp49wss8eum0abwp8bj48w', 
-                'Simba12371#6037'       : '1138992184', 
-                'PigRectum#4296'        : 'ofrench560'}
-
+usernames = ast.literal_eval(os.getenv("SPOTIFY_NAMES"))
 client_id = os.getenv("SPOTIFY_ID")
 client_secret = os.getenv("SPOTIFY_SECRET")
 
@@ -246,7 +241,7 @@ class Music(commands.Cog):
 
         if not voice_client.is_playing():
             await self.update_queue()
-
+   
     @commands.command()
     async def queue(self, ctx, page):
         self.queue.currentPage = int(page) - 1
