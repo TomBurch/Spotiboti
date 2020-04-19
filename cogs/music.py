@@ -243,7 +243,7 @@ class Music(commands.Cog):
             await self.update_queue()
    
     @commands.command()
-    async def queue(self, ctx, page):
+    async def queue(self, ctx, page = 1):
         self.queue.currentPage = int(page) - 1
         await self.send_message(self.queue.formatPage(), immutable = True)
 
